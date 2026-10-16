@@ -8,6 +8,7 @@ written against the Pi 1.x extension API. They run on Windows, macOS and Linux.
 | [`env-switch`](extensions/env-switch/README.md) | Picks an env profile per repo (git remote, remote name, path) and swaps API keys/tokens in, so production keys and billing tiers never cross projects. Redacts secrets from tool output. |
 | [`notes-sync`](extensions/notes-sync/README.md) | `/note`, `/decision`, `/arch`, `/todo` append to a folder Obsidian watches (optionally Joplin), tagged with project and branch. |
 | [`git-context`](extensions/git-context/README.md) | Injects branch, recent commits, branch-only commits and uncommitted changes into the system prompt at startup. |
+| [`diagnostics`](extensions/diagnostics/README.md) | Runs `tsc`, `pyright`/`pyflakes` or `go vet` after every edit or write and appends the errors for the touched file to the tool result, so the model sees what it broke immediately. |
 
 ## Install
 
@@ -46,6 +47,7 @@ to pi's own settings:
 ├── env-profiles.json     # env-switch: profiles + rules  (holds secrets/commands; keep private)
 ├── notes-sync.json       # notes-sync: vault path, layout, Joplin
 ├── git-context.json      # git-context: tuning
+├── diagnostics.json      # diagnostics: checker commands per extension
 └── extensions/           # drop-in single-folder installs
 ```
 
@@ -64,7 +66,7 @@ pi -e ./extensions/env-switch     # run one extension from source; /reload after
 
 Pi loads TypeScript directly (via `jiti`), so there is no build step. Tests cover the pure logic
 of each extension (matching, redaction, formatting, snapshot parsing against a real temp git
-repo, a mock Joplin server). Keep `profiles.ts`/`format.ts`/`snapshot.ts` free of pi imports so
+repo, a mock Joplin server). Keep `profiles.ts`/`format.ts`/`snapshot.ts`/`checkers.ts` free of pi imports so
 they stay testable under plain `node --test`.
 
 Pi extensions run with your full user permissions. Read anything you add here before loading it.

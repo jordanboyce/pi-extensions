@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "timeoutMs": 20000,
+  "debounceMs": 300,
+  "maxLines": 20,
+  "checkers": {
+    ".ts": {
+      "name": "tsc",
+      "command": "tsc -p {marker} --noEmit --pretty false",
+      "marker": "tsconfig.json",
+      "fallback": "tsc --noEmit --pretty false {file}",
+      "format": "tsc"
+    },
+    ".py": [
+      { "name": "pyright", "command": "pyright {file}", "marker": "pyproject.toml", "format": "pyright" },
+      { "name": "pyflakes", "command": "python -m pyflakes {file}", "format": "generic" }
+    ],
+    ".go": { "name": "go vet", "command": "go vet ./...", "marker": "go.mod", "format": "generic" },
+    ".rs": { "name": "cargo check", "command": "cargo check --message-format short", "marker": "Cargo.toml", "format": "generic", "timeoutMs": 60000 },
+    ".tsx": false
+  }
+}
