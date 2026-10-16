@@ -4,6 +4,7 @@
   "layout": "project",
   "tags": ["pi"],
   "modelTool": true,
+  "logCompaction": false,
   "joplin": {
     "port": 41184,
     "notebook": "Pi Notes",

@@ -22,6 +22,7 @@ import {
 	entryBody,
 	entryTags,
 	entryTitle,
+	extractCompactionDecisions,
 	fileHeader,
 	formatEntry,
 	NOTE_KINDS,
@@ -197,6 +198,22 @@ export default async function notesSync(pi: ExtensionAPI) {
 				ctx.ui.notify(`notes-sync: ${(e as Error).message}`, "error");
 			}
 		},
+	});
+
+	// Compaction summarises the conversation away; its "Key Decisions" section is the part worth
+	// keeping. Opt-in, because summaries can be long and not every session is worth a vault entry.
+	pi.on("session_compact", async (event, ctx) => {
+		try {
+			const loaded = await loadConfig();
+			if (!loaded.config.logCompaction) return;
+			const decisions = extractCompactionDecisions(event.compactionEntry.summary);
+			if (!decisions.length) return;
+			const r = await save(ctx.cwd, "decision", decisions.map((d) => `- ${d}`).join("\n"), `Compaction summary (${event.reason})`);
+			const lines = [`Logged ${decisions.length} compaction decision${decisions.length === 1 ? "" : "s"} → ${r.path}`, ...r.warnings];
+			ctx.ui.notify(lines.join("\n"), r.warnings.length ? "warning" : "info");
+		} catch (e) {
+			ctx.ui.notify(`notes-sync: could not log compaction decisions: ${(e as Error).message}`, "warning");
+		}
 	});
 
 	// Optional model-callable tool, gated by config. Pi awaits an async factory, so registering here is safe.

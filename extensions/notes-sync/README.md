@@ -41,6 +41,8 @@ e.g. `"C:\\Users\\me\\Obsidian\\Work"`):
 | `vault` / `folder` | Notes land in `<vault>/<folder>`. Without `vault`, they go to `~/.pi/agent/notes` and pi tells you once. |
 | `layout` | `project` (default): `<folder>/<project>.md`. `daily`: `<folder>/<project>/YYYY-MM-DD.md`. |
 | `tags` | Added to every entry (default `["pi"]`). |
+| `modelTool` | Register the `save_note` tool for the model (default `true`). |
+| `logCompaction` | Log each compaction's Key Decisions as a decision entry (default `false`, see below). |
 | `joplin` | See below. |
 
 `PI_NOTES_DIR` overrides the destination folder entirely; `PI_NOTES_CONFIG` overrides the config path.
@@ -71,6 +73,14 @@ Use SQLite for local dev; Postgres is overkill here.
   Windows (reserved names, `<>:"|?*`, trailing dots).
 - Append-only: a first write creates the file with frontmatter; later writes only append.
   Concurrent sessions are safe.
+
+## Compaction decisions (optional)
+
+When a long session is compacted, pi replaces the conversation with a structured summary that
+has a **Key Decisions** section. With `"logCompaction": true`, the bullets of that section are
+appended to the project's note as one `decision` entry titled `Compaction summary (<reason>)`,
+where the reason is `manual`, `threshold` or `overflow`. Nothing is written when the section is
+missing or empty. It is off by default because not every session's summary is worth a vault entry.
 
 ## Joplin (optional)
 

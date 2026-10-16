@@ -8,6 +8,7 @@ import { after, describe, it } from "node:test";
 import {
 	entryTags,
 	entryTitle,
+	extractCompactionDecisions,
 	fileHeader,
 	formatEntry,
 	notePath,
@@ -89,7 +90,46 @@ describe("formatting", () => {
 		assert.match(validateConfig({ joplin: { port: "41184" } }).error ?? "", /joplin\.port/);
 		assert.match(validateConfig({ joplin: "yes" }).error ?? "", /"joplin" must be an object/);
 		assert.match(validateConfig({ modelTool: "true" }).error ?? "", /modelTool/);
+		assert.match(validateConfig({ logCompaction: "yes" }).error ?? "", /logCompaction/);
+		assert.ok(validateConfig({ logCompaction: true }).config);
 		assert.match(validateConfig([]).error ?? "", /JSON object/);
+	});
+});
+
+describe("compaction decisions", () => {
+	const summary = [
+		"## Goal",
+		"Ship the ledger.",
+		"",
+		"## Progress",
+		"### Done",
+		"- [x] Schema migration",
+		"",
+		"## Key Decisions",
+		"- **Use SQLite locally**: Postgres is overkill for dev.",
+		"* Keep the old API until v3 ships",
+		"",
+		"  - **Nested bullet counts too**",
+		"",
+		"## Next Steps",
+		"1. Write the importer",
+		"",
+		"<read-files>",
+		"a.ts",
+		"</read-files>",
+	].join("\n");
+	it("returns the Key Decisions bullets and stops at the next heading", () => {
+		assert.deepEqual(extractCompactionDecisions(summary), [
+			"**Use SQLite locally**: Postgres is overkill for dev.",
+			"Keep the old API until v3 ships",
+			"**Nested bullet counts too**",
+		]);
+	});
+	it("returns [] without the section, with an empty section, or with only the template placeholder", () => {
+		assert.deepEqual(extractCompactionDecisions("## Goal\nx\n## Next Steps\n1. y"), []);
+		assert.deepEqual(extractCompactionDecisions("## Key Decisions\n\n## Next Steps\n- z"), []);
+		assert.deepEqual(extractCompactionDecisions("## Key Decisions\n- [Decision]: [Rationale]"), []);
+		assert.deepEqual(extractCompactionDecisions("## key decisions\r\n- crlf and case ok\r\n"), ["crlf and case ok"]);
 	});
 });
 

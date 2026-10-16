@@ -30,7 +30,27 @@ export interface NotesConfig {
 	tags?: string[];
 	/** Register the `save_note` tool so the model can log things when you ask it to. Default true. */
 	modelTool?: boolean;
+	/** Log the "Key Decisions" of every context compaction as a decision entry. Default false. */
+	logCompaction?: boolean;
 	joplin?: JoplinConfig;
+}
+
+/**
+ * Bullet items under the `## Key Decisions` heading of a pi compaction summary, without the
+ * list marker. Stops at the next `## ` heading. Returns [] when the section is missing or empty.
+ */
+export function extractCompactionDecisions(summary: string): string[] {
+	const lines = summary.split(/\r?\n/);
+	const start = lines.findIndex((l) => /^##\s+Key Decisions\s*$/i.test(l.trim()));
+	if (start < 0) return [];
+	const out: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		const t = line.trim();
+		if (/^##\s/.test(t)) break;
+		const item = /^(?:[-*+]|\d+[.)])\s+(.*)$/.exec(t)?.[1]?.trim();
+		if (item && !/^\[.*\]$/.test(item)) out.push(item); // skip the template's own "[Decision]" placeholder
+	}
+	return out;
 }
 
 export interface NoteEntry {
@@ -158,7 +178,9 @@ export function validateConfig(raw: unknown): { config?: NotesConfig; error?: st
 	if (c.tags !== undefined && (!Array.isArray(c.tags) || c.tags.some((t) => typeof t !== "string"))) {
 		return { error: '"tags" must be an array of strings' };
 	}
-	if (c.modelTool !== undefined && typeof c.modelTool !== "boolean") return { error: '"modelTool" must be true or false' };
+	for (const key of ["modelTool", "logCompaction"] as const) {
+		if (c[key] !== undefined && typeof c[key] !== "boolean") return { error: `"${key}" must be true or false` };
+	}
 	if (c.joplin !== undefined) {
 		if (!isPlainObject(c.joplin)) return { error: '"joplin" must be an object' };
 		const j = c.joplin;
