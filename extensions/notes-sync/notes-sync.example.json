@@ -1,0 +1,12 @@
+{
+  "vault": "C:\\Users\\me\\Documents\\Obsidian\\Work",
+  "folder": "Pi Notes",
+  "layout": "project",
+  "tags": ["pi"],
+  "modelTool": true,
+  "joplin": {
+    "port": 41184,
+    "notebook": "Pi Notes",
+    "tokenEnv": "JOPLIN_TOKEN"
+  }
+}

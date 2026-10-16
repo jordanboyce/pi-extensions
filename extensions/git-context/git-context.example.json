@@ -1,0 +1,8 @@
+{
+  "mode": "startup",
+  "commits": 10,
+  "branchCommits": 10,
+  "maxFiles": 30,
+  "maxDiffLines": 25,
+  "maxChars": 6000
+}

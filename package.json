@@ -1,0 +1,35 @@
+{
+  "name": "pi-extensions",
+  "version": "0.1.0",
+  "description": "Personal collection of pi (pi.dev) extensions: per-repo env switching, notes sync, git context injection.",
+  "private": true,
+  "type": "module",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "pi": {
+    "extensions": [
+      "./extensions/env-switch/index.ts",
+      "./extensions/notes-sync/index.ts",
+      "./extensions/git-context/index.ts"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/*.test.ts\"",
+    "check": "npm run typecheck && npm test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^1.1.0",
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@earendil-works/pi-tui": "^1.1.0",
+    "@types/node": "^24.0.0",
+    "typebox": "^1.0.0",
+    "typescript": "^5.9.0"
+  }
+}

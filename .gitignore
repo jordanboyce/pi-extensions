@@ -1,0 +1,6 @@
+node_modules/
+*.log
+# Real profile files hold secrets; only the *.example.json files are tracked.
+env-profiles.json
+notes-sync.json
+git-context.json
