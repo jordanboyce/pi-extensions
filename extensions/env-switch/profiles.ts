@@ -13,6 +13,12 @@ export interface Profile {
 	unset?: string[];
 	/** Extra variable names (beyond the KEY/TOKEN/SECRET heuristic) whose values are redacted. */
 	redact?: string[];
+	/**
+	 * Regular expressions (case-insensitive) matched against the full command line of the agent's
+	 * bash/powershell tool calls while this profile is active. A match blocks the call. A tripwire
+	 * against running destructive commands with production credentials, not a security boundary.
+	 */
+	guard?: string[];
 }
 
 export interface Rule {
@@ -250,6 +256,33 @@ export class EnvApplier {
 }
 
 // ---------------------------------------------------------------------------
+// Guarded commands
+// ---------------------------------------------------------------------------
+
+/** Returns the error message for a guard pattern that does not compile, else undefined. */
+export function guardPatternError(pattern: string): string | undefined {
+	try {
+		new RegExp(pattern, "i");
+		return undefined;
+	} catch (e) {
+		return (e as Error).message;
+	}
+}
+
+/**
+ * First `guard` pattern of the profile that matches `command`, or undefined. Patterns are
+ * matched case-insensitively against the whole command line, so `\bgit\s+push\b` catches
+ * `git push`, `cd x && git push --force` and `GIT PUSH`.
+ */
+export function guardMatch(profile: Profile, command: string): string | undefined {
+	for (const pattern of profile.guard ?? []) {
+		if (guardPatternError(pattern)) continue; // validated at load; a bad pattern cannot block anything
+		if (new RegExp(pattern, "i").test(command)) return pattern;
+	}
+	return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Redaction + display
 // ---------------------------------------------------------------------------
 
@@ -350,8 +383,12 @@ export function validateConfig(raw: unknown): { config?: EnvSwitchConfig; error?
 			if (typeof v !== "string") return { error: `profiles.${name}.env.${k} must be a string` };
 			if (!VAR_NAME.test(k)) return { error: `profiles.${name}.env has invalid variable name "${k}"` };
 		}
-		for (const field of ["unset", "redact"] as const) {
+		for (const field of ["unset", "redact", "guard"] as const) {
 			if (p[field] !== undefined && !isStringList(p[field])) return { error: `profiles.${name}.${field} must be an array of strings` };
+		}
+		for (const [i, pattern] of (p.guard as string[] | undefined)?.entries() ?? []) {
+			const err = guardPatternError(pattern);
+			if (err) return { error: `profiles.${name}.guard[${i}] is not a valid regular expression: ${err}` };
 		}
 		for (const field of ["description", "warn"] as const) {
 			if (p[field] !== undefined && typeof p[field] !== "string") return { error: `profiles.${name}.${field} must be a string` };

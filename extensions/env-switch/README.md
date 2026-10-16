@@ -49,6 +49,29 @@ slashes or backslashes; `~` is not expanded, so write `**/work/acme/**` or the f
 `repo`. Fields in one rule are ANDed; a list within a field is ORed. Globs are case-insensitive;
 `*` stays within a path segment, `**` crosses them.
 
+## Guarded commands
+
+A profile can list regular expressions that the agent's shell commands must not match while it
+is active:
+
+```jsonc
+"acme-prod": {
+  "warn": "PRODUCTION keys are active.",
+  "env": { … },
+  "guard": ["\\bgit\\s+push\\b", "\\bterraform\\s+(apply|destroy)\\b", "\\bkubectl\\s+(apply|delete|rollout)\\b"]
+}
+```
+
+Patterns are matched case-insensitively against the whole command line of every `bash` and
+`powershell` tool call (so `cd api && git push --force` is caught). A match blocks the call before
+it runs; the model is told which profile and pattern blocked it and to ask you instead, and you
+get a warning in the UI. `/env` lists the active guards.
+
+This is a tripwire against the agent running a destructive command with production credentials,
+not a security boundary: it only inspects the command text, so an indirect route (a script that
+pushes, an alias) gets through, and commands you type yourself with `!` are never blocked.
+Patterns that don't compile are rejected when the config loads.
+
 ## Commands
 
 | Command | Does |

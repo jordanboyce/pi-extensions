@@ -4,6 +4,8 @@ import {
 	EnvApplier,
 	fingerprint,
 	globToRegExp,
+	guardMatch,
+	guardPatternError,
 	interpolate,
 	normalizeRemoteUrl,
 	parsePin,
@@ -162,6 +164,26 @@ describe("redaction", () => {
 	});
 });
 
+describe("guarded commands", () => {
+	const profile = { guard: ["\\bgit\\s+push\\b", "\\bterraform\\s+(apply|destroy)\\b"] };
+	it("matches anywhere in the command line, case-insensitively", () => {
+		assert.equal(guardMatch(profile, "git push"), "\\bgit\\s+push\\b");
+		assert.equal(guardMatch(profile, "cd api && GIT  PUSH --force"), "\\bgit\\s+push\\b");
+		assert.equal(guardMatch(profile, "terraform apply -auto-approve"), "\\bterraform\\s+(apply|destroy)\\b");
+	});
+	it("does not match unrelated commands or partial words", () => {
+		assert.equal(guardMatch(profile, "git status"), undefined);
+		assert.equal(guardMatch(profile, "git pushover"), undefined);
+		assert.equal(guardMatch(profile, "terraform plan"), undefined);
+		assert.equal(guardMatch({}, "git push"), undefined, "no guard list means nothing is blocked");
+	});
+	it("reports invalid patterns and never lets them block", () => {
+		assert.match(guardPatternError("(unclosed") ?? "", /./);
+		assert.equal(guardPatternError("\\bok\\b"), undefined);
+		assert.equal(guardMatch({ guard: ["(unclosed"] }, "(unclosed"), undefined);
+	});
+});
+
 describe("validateConfig", () => {
 	it("accepts a good config", () => assert.ok(validateConfig({ profiles: { a: { env: { X: "1" } } }, rules: [{ profile: "a", repo: "x" }], default: "a" }).config));
 	it("rejects dangling references and bad names", () => {
@@ -177,6 +199,9 @@ describe("validateConfig", () => {
 		assert.match(validateConfig({ profiles: { a: { redact: [1] } } }).error ?? "", /redact must be an array of strings/);
 		assert.match(validateConfig({ profiles: { a: {} }, rules: [{ profile: "a", remote: 5 }] }).error ?? "", /rules\[0\]\.remote/);
 		assert.match(validateConfig({ profiles: { a: {} }, redact: "no" }).error ?? "", /"redact" must be true or false/);
+		assert.match(validateConfig({ profiles: { a: { guard: "git push" } } }).error ?? "", /guard must be an array of strings/);
+		assert.match(validateConfig({ profiles: { a: { guard: ["ok", "(bad"] } } }).error ?? "", /guard\[1\] is not a valid regular expression/);
+		assert.ok(validateConfig({ profiles: { a: { guard: ["\\bgit\\s+push\\b"] } } }).config);
 		assert.ok(validateConfig({ profiles: { a: { unset: ["X"], redact: ["Y"], warn: "w" } }, rules: [{ profile: "a", path: ["p", "q"] }], redact: false }).config);
 	});
 });

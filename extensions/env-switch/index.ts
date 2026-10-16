@@ -16,6 +16,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import {
 	EnvApplier,
 	fingerprint,
+	guardMatch,
 	normalizeRemoteUrl,
 	parsePin,
 	PROVIDER_ENV,
@@ -236,6 +237,27 @@ export default function envSwitch(pi: ExtensionAPI) {
 		return structuredContent === undefined ? { content } : { content, structuredContent };
 	});
 
+	// Guarded commands: while a profile with `guard` patterns is active, matching shell commands
+	// issued by the agent are blocked before they run. Commands the user types with `!` are not
+	// affected; the guard exists to stop the agent, not the person.
+	pi.on("tool_call", (event, ctx) => {
+		const profile = current?.resolved.profile;
+		if (!profile?.guard?.length) return;
+		if (event.toolName !== "bash" && event.toolName !== "powershell") return;
+		const command = event.input.command;
+		if (typeof command !== "string") return;
+		const pattern = guardMatch(profile, command);
+		if (!pattern) return;
+		const name = current!.resolved.name;
+		ctx.ui.notify(`env-switch: blocked a ${event.toolName} command while profile "${name}" is active (matched /${pattern}/).`, "warning");
+		return {
+			block: true,
+			reason:
+				`env-switch: profile "${name}" blocks commands matching /${pattern}/. ` +
+				`Ask the user to run it themselves, or to switch profiles with /env use <name> first.`,
+		};
+	});
+
 	// -- commands -----------------------------------------------------------
 
 	function describe(): string {
@@ -253,6 +275,7 @@ export default function envSwitch(pi: ExtensionAPI) {
 			...Object.entries(resolved.values).map(([k, v]) => `  ${k} = ${show(k, v)}`),
 		];
 		if (resolved.profile.unset?.length) lines.push(`Unset: ${resolved.profile.unset.join(", ")}`);
+		if (resolved.profile.guard?.length) lines.push(`Guarded commands: ${resolved.profile.guard.map((g) => `/${g}/`).join(", ")}`);
 		if (resolved.errors.length) lines.push("Unresolved:", ...resolved.errors.map((e) => `  ${e}`));
 		return lines.join("\n");
 	}

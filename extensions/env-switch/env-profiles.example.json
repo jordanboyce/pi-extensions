@@ -23,7 +23,13 @@
         "ANTHROPIC_API_KEY": "!op read op://Acme/anthropic-prod/credential",
         "ACME_API_TOKEN": "!op read op://Acme/acme-prod/token"
       },
-      "unset": ["OPENAI_API_KEY"]
+      "unset": ["OPENAI_API_KEY"],
+      "guard": [
+        "\\bgit\\s+push\\b",
+        "\\bterraform\\s+(apply|destroy)\\b",
+        "\\bkubectl\\s+(apply|delete|rollout)\\b",
+        "\\b(drop|truncate)\\s+table\\b"
+      ]
     }
   },
   "rules": [
