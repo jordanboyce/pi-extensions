@@ -4,3 +4,4 @@ node_modules/
 env-profiles.json
 notes-sync.json
 git-context.json
+subagent.json
