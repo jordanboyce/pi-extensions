@@ -23,7 +23,9 @@ interface Item {
 	parent_id?: string;
 }
 
+/** `${base}|${notebook}` -> folder id, and `${base}|tag:${title}` -> tag id. Joplin ids are stable for the app's lifetime. */
 const folderCache = new Map<string, string>();
+const tagCache = new Map<string, string>();
 
 export interface JoplinNote {
 	title: string;
@@ -76,8 +78,13 @@ export async function sendToJoplin(
 
 	for (const raw of note.tags) {
 		const tag = raw.toLowerCase(); // Joplin lower-cases tag titles
-		const found = await call<Page<Item>>("GET", `/search?query=${encodeURIComponent(tag)}&type=tag&fields=id,title`);
-		const tagId = found.items.find((t) => t.title === tag)?.id ?? (await call<Item>("POST", "/tags", { title: tag })).id;
+		const tagKey = `${base}|tag:${tag}`;
+		let tagId = tagCache.get(tagKey);
+		if (!tagId) {
+			const found = await call<Page<Item>>("GET", `/search?query=${encodeURIComponent(tag)}&type=tag&fields=id,title`);
+			tagId = found.items.find((t) => t.title === tag)?.id ?? (await call<Item>("POST", "/tags", { title: tag })).id;
+			tagCache.set(tagKey, tagId);
+		}
 		await call("POST", `/tags/${tagId}/notes`, { id: created.id });
 	}
 	return created.id;
@@ -85,4 +92,5 @@ export async function sendToJoplin(
 
 export function clearJoplinCache(): void {
 	folderCache.clear();
+	tagCache.clear();
 }

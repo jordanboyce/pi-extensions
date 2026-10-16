@@ -61,10 +61,45 @@ export interface GitSnapshot {
 	takenAt: Date;
 }
 
-/** Repository text is attacker-influenced (clones): flatten to one line (no newlines/ESC) and cap length. */
+/**
+ * Repository text is attacker-influenced (clones): flatten to one line and cap length.
+ * Strips ASCII controls (newlines, ESC), Unicode line/paragraph separators, and bidi
+ * overrides/isolates, which can make the rendered text read differently from its bytes.
+ */
 export function clean(s: string, max = 160): string {
-	const t = s.replace(/[\x00-\x1f\x7f]/g, " ").trim();
+	const t = s
+		.replace(/[\x00-\x1f\x7f\u2028\u2029]/g, " ")
+		.replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+		.trim();
 	return t.length > max ? `${t.slice(0, max - 3)}...` : t;
+}
+
+/**
+ * Coerces a parsed config file into a usable config, reporting the first problem. Numbers may be
+ * written as strings; `mode` must be one of the two documented values.
+ */
+export function normalizeConfig(raw: unknown): { config: GitContextConfig; error?: string } {
+	if (raw === undefined || raw === null) return { config: {} };
+	if (typeof raw !== "object" || Array.isArray(raw)) return { config: {}, error: "config must be a JSON object" };
+	const r = raw as Record<string, unknown>;
+	const config: GitContextConfig = {};
+	if (r.enabled !== undefined) {
+		if (typeof r.enabled !== "boolean") return { config: {}, error: '"enabled" must be true or false' };
+		config.enabled = r.enabled;
+	}
+	if (r.mode !== undefined) {
+		if (r.mode !== "startup" && r.mode !== "live") return { config: {}, error: '"mode" must be "startup" or "live"' };
+		config.mode = r.mode;
+	}
+	for (const key of ["commits", "branchCommits", "maxFiles", "maxDiffLines", "maxChars"] as const) {
+		const v = r[key];
+		if (v === undefined) continue;
+		const n = typeof v === "string" && v.trim() ? Number(v) : v;
+		if (typeof n !== "number" || !Number.isInteger(n) || n < 0) return { config: {}, error: `"${key}" must be a non-negative integer` };
+		config[key] = n;
+	}
+	if (config.maxChars !== undefined && config.maxChars < 200) return { config: {}, error: '"maxChars" must be at least 200' };
+	return { config };
 }
 
 const CONFLICT_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);

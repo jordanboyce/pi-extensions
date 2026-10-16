@@ -16,18 +16,29 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { collectSnapshot, renderSnapshot, statusSummary, type Git, type GitContextConfig } from "./snapshot.ts";
+import { collectSnapshot, normalizeConfig, renderSnapshot, statusSummary, type Git, type GitContextConfig } from "./snapshot.ts";
 
 const STATUS_KEY = "git-context";
 const SECTION = "git_context";
 
-async function loadConfig(): Promise<GitContextConfig> {
-	const dir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+function configPath(): string {
+	return join(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent"), "git-context.json");
+}
+
+/** A missing file means defaults; a broken one is reported (and defaults are used) rather than silently ignored. */
+async function loadConfig(): Promise<{ config: GitContextConfig; error?: string }> {
+	let text: string;
 	try {
-		const parsed = JSON.parse(await readFile(join(dir, "git-context.json"), "utf8")) as GitContextConfig;
-		return parsed && typeof parsed === "object" ? parsed : {};
-	} catch {
-		return {};
+		text = await readFile(configPath(), "utf8");
+	} catch (e) {
+		if ((e as NodeJS.ErrnoException).code === "ENOENT") return { config: {} };
+		return { config: {}, error: `could not read ${configPath()}: ${(e as Error).message}` };
+	}
+	try {
+		const r = normalizeConfig(JSON.parse(text));
+		return r.error ? { config: {}, error: `${configPath()}: ${r.error}` } : { config: r.config };
+	} catch (e) {
+		return { config: {}, error: `${configPath()} is not valid JSON: ${(e as Error).message}` };
 	}
 }
 
@@ -63,7 +74,9 @@ export default function gitContext(pi: ExtensionAPI) {
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
-		config = await loadConfig();
+		const loaded = await loadConfig();
+		config = loaded.config;
+		if (loaded.error) ctx.ui.notify(`git-context: ${loaded.error} (using defaults)`, "warning");
 		enabled = config.enabled !== false && process.env.PI_GIT_CONTEXT?.toLowerCase() !== "off";
 		if (!enabled) return;
 		await refresh(ctx);

@@ -6,6 +6,9 @@
   "type": "module",
   "keywords": ["pi-package"],
   "license": "MIT",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "pi": {
     "extensions": [
       "./extensions/env-switch/index.ts",

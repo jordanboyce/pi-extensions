@@ -19,9 +19,11 @@ import {
 	normalizeRemoteUrl,
 	parsePin,
 	PROVIDER_ENV,
+	redactJson,
 	redactText,
 	repoNameFromRemote,
 	resolveProfile,
+	SECRET_NAME,
 	secretsOf,
 	selectProfile,
 	validateConfig,
@@ -215,6 +217,8 @@ export default function envSwitch(pi: ExtensionAPI) {
 	});
 
 	// Keep secrets out of model-visible tool output (e.g. `env`, `printenv`, config dumps).
+	// Pi drops `structuredContent` when a handler replaces `content` alone, so both are
+	// redacted and returned together.
 	pi.on("tool_result", (event) => {
 		const secrets = current?.secrets;
 		if (!secrets || Object.keys(secrets).length === 0) return;
@@ -222,10 +226,14 @@ export default function envSwitch(pi: ExtensionAPI) {
 		const content = event.content.map((part) => {
 			if (part.type !== "text") return part;
 			const text = redactText(part.text, secrets);
-			if (text !== part.text) changed = true;
-			return text === part.text ? part : { ...part, text };
+			if (text === part.text) return part;
+			changed = true;
+			return { ...part, text };
 		});
-		return changed ? { content } : undefined;
+		const structuredContent = event.structuredContent === undefined ? undefined : redactJson(event.structuredContent, secrets);
+		if (structuredContent !== event.structuredContent) changed = true;
+		if (!changed) return undefined;
+		return structuredContent === undefined ? { content } : { content, structuredContent };
 	});
 
 	// -- commands -----------------------------------------------------------
@@ -234,13 +242,15 @@ export default function envSwitch(pi: ExtensionAPI) {
 		if (!current) {
 			return `No profile active.\nConfig: ${configPath()}${config ? "" : " (not found)"}\nRepo: ${repo?.repoName ?? "?"}${repo?.remote ? ` (${repo.remote})` : ""}`;
 		}
-		const { selection, resolved } = current;
+		const { selection, resolved, secrets } = current;
+		// Secrets show as a fingerprint; plain settings (base URLs, regions) are shown in full.
+		const show = (k: string, v: string) => (k in secrets || SECRET_NAME.test(k) ? fingerprint(v) : v);
 		const lines = [
 			`Profile: ${resolved.name} (via ${selection.source})`,
 			...(resolved.profile.description ? [resolved.profile.description] : []),
 			`Repo: ${repo?.repoName ?? "?"}${repo?.remote ? ` (${repo.remote})` : ""}`,
 			"Set:",
-			...Object.entries(resolved.values).map(([k, v]) => `  ${k} = ${fingerprint(v)}`),
+			...Object.entries(resolved.values).map(([k, v]) => `  ${k} = ${show(k, v)}`),
 		];
 		if (resolved.profile.unset?.length) lines.push(`Unset: ${resolved.profile.unset.join(", ")}`);
 		if (resolved.errors.length) lines.push("Unresolved:", ...resolved.errors.map((e) => `  ${e}`));

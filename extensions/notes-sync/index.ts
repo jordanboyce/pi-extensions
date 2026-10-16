@@ -78,7 +78,10 @@ export default async function notesSync(pi: ExtensionAPI) {
 	async function context(cwd: string): Promise<{ project: string; branch?: string }> {
 		const root = await git(cwd, ["rev-parse", "--show-toplevel"]);
 		if (!root) return { project: basename(cwd) };
-		const remote = await git(root, ["remote", "get-url", "origin"]);
+		// Prefer `origin`; a repo whose only remote is named differently (e.g. a fork setup) still gets its remote name.
+		const names = ((await git(root, ["remote"])) ?? "").split(/\r?\n/).filter(Boolean);
+		const primary = names.includes("origin") ? "origin" : names[0];
+		const remote = primary ? await git(root, ["remote", "get-url", primary]) : undefined;
 		const project = (remote && projectNameFromRemote(remote)) || basename(root);
 		let branch = await git(root, ["branch", "--show-current"]);
 		if (!branch) {
@@ -178,9 +181,15 @@ export default async function notesSync(pi: ExtensionAPI) {
 					const rows = await recentEntries(path, 8);
 					ctx.ui.notify(rows.length ? rows.join("\n") : `No entries yet in ${path}`, "info");
 				} else if (sub === "open") {
+					// Inside a vault, hand the file to Obsidian itself (it registers the obsidian:// scheme);
+					// otherwise the OS default app for .md gets it. The file may not exist yet: create it so the
+					// target opens instead of erroring.
+					await appendToNote(path, fileHeader(probe, loaded.config), "");
+					const target = loaded.config.vault ? `obsidian://open?path=${encodeURIComponent(path)}` : path;
 					const [cmd, argv]: [string, string[]] =
-						process.platform === "win32" ? ["explorer.exe", [path]] : process.platform === "darwin" ? ["open", [path]] : ["xdg-open", [path]];
+						process.platform === "win32" ? ["explorer.exe", [target]] : process.platform === "darwin" ? ["open", [target]] : ["xdg-open", [target]];
 					await pi.exec(cmd, argv, { timeout: 5000 }).catch(() => undefined); // explorer.exe exits 1 on success
+					ctx.ui.notify(`Opening ${path}${loaded.config.vault ? " in Obsidian" : ""}`, "info");
 				} else {
 					ctx.ui.notify("Usage: /notes [path|open|recent]", "warning");
 				}

@@ -51,12 +51,15 @@ sent. The footer shows `branch ●changed ↑ahead ↓behind`.
 { "mode": "startup", "commits": 10, "branchCommits": 10, "maxFiles": 30, "maxDiffLines": 25, "maxChars": 6000 }
 ```
 
+A malformed file (bad JSON, unknown `mode`, a negative count) is reported as a warning at session
+start and the defaults are used, so a typo never silently turns the extension off.
+
 ## Security note
 
 Commit subjects, branch names and file names in a repo you just cloned are attacker-controlled
 text, and this extension puts them in the system prompt. Mitigations: all repo text is flattened
-to single lines with control characters removed and length-capped, and the section states that
-it is data, not instructions. That reduces, but can't eliminate, prompt-injection risk; set
+to single lines with control characters, Unicode line separators and bidi overrides removed and
+length-capped, and the section states that it is data, not instructions. That reduces, but can't eliminate, prompt-injection risk; set
 `PI_GIT_CONTEXT=off` (or `/git-context off`) when opening a repo you don't trust.
 
 Git runs with `--no-optional-locks`, so it never contends with your editor's git operations.

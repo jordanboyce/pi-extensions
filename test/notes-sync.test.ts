@@ -55,12 +55,11 @@ describe("formatting", () => {
 		assert.match(md, /Use SQLite for local dev\.\nPostgres is overkill here\./);
 		assert.match(md, /#pi #decision #project\/billing-api #branch\/feature\/new-ledger\n$/);
 	});
-	it("todo is an Obsidian Tasks checkbox with tags on the first line", () => {
+	it("todo is an Obsidian Tasks checkbox: tags, then the created-date field last on the line", () => {
 		const md = formatEntry(entry({ kind: "todo", text: "Migrate ledger table\nafter review" }), {}, true);
-		assert.equal(
-			md,
-			"\n- [ ] Migrate ledger table #pi #todo #project/billing-api #branch/feature/new-ledger — 2026-10-16 14:03\n  after review\n",
-		);
+		assert.equal(md, "\n- [ ] Migrate ledger table #pi #todo #project/billing-api #branch/feature/new-ledger ➕ 2026-10-16\n  after review\n");
+		// Daily layout files still carry the created date: Tasks reads it from the line, not the file name.
+		assert.match(formatEntry(entry({ kind: "todo", text: "x" }), { layout: "daily" }, false), /➕ 2026-10-16\n$/);
 	});
 	it("omits branch when not on one", () => {
 		assert.doesNotMatch(formatEntry(entry({ branch: undefined }), {}, true), /Branch|branch\//);
@@ -82,10 +81,15 @@ describe("formatting", () => {
 		assert.equal(projectNameFromRemote("git@github.com:Acme/Billing-API.git"), "Billing-API");
 		assert.equal(projectNameFromRemote("https://github.com/acme/billing-api/"), "billing-api");
 	});
-	it("validateConfig rejects non-loopback Joplin host", () => {
+	it("validateConfig rejects non-loopback Joplin host and malformed fields", () => {
 		assert.match(validateConfig({ joplin: { host: "evil.example.com" } }).error ?? "", /loopback/);
-		assert.ok(validateConfig({ joplin: { host: "localhost" } }).config);
+		assert.ok(validateConfig({ joplin: { host: "localhost", port: 41184, notebook: "Pi Notes" } }).config);
 		assert.match(validateConfig({ layout: "weekly" }).error ?? "", /layout/);
+		assert.match(validateConfig({ vault: 42 }).error ?? "", /"vault" must be a non-empty string/);
+		assert.match(validateConfig({ joplin: { port: "41184" } }).error ?? "", /joplin\.port/);
+		assert.match(validateConfig({ joplin: "yes" }).error ?? "", /"joplin" must be an object/);
+		assert.match(validateConfig({ modelTool: "true" }).error ?? "", /modelTool/);
+		assert.match(validateConfig([]).error ?? "", /JSON object/);
 	});
 });
 
@@ -102,6 +106,8 @@ describe("store", () => {
 		const text = await readFile(file, "utf8");
 		assert.equal(text, "HEADER\n\n## one\n\n## two\n\n- [ ] a task\n");
 		assert.deepEqual(await recentEntries(file, 2), ["## two", "- [ ] a task"]);
+		await appendToNote(file, "HEADER\n", "\n- [x] done task\n  continuation line\n");
+		assert.deepEqual(await recentEntries(file, 2), ["- [ ] a task", "- [x] done task"], "checked todos still count; continuation lines do not");
 		assert.deepEqual(await recentEntries(join(dir, "missing.md"), 5), []);
 	});
 

@@ -11,10 +11,10 @@ and **git branch**. Nothing to switch windows for: type `/decision …` and keep
 | `/note <text>` | a timestamped note |
 | `/decision <text>` | a decision (and its why) |
 | `/arch <text>` | an architecture note |
-| `/todo <text>` | an Obsidian-Tasks checkbox: `- [ ] text #pi #todo #project/x #branch/y — 2026-10-16 14:03` |
+| `/todo <text>` | an Obsidian Tasks checkbox: `- [ ] text #pi #todo #project/x #branch/y ➕ 2026-10-16` (the trailing field is Tasks' created date, so its queries can sort and filter by it) |
 | `/notes` (`path`) | the file this repo's notes go to |
-| `/notes recent` | headings of the last few entries |
-| `/notes open` | open that file in your default app |
+| `/notes recent` | headings and todo lines of the last few entries |
+| `/notes open` | open that file in Obsidian (via `obsidian://open`) when `vault` is set, else in the default app for `.md`; creates the file if it doesn't exist yet |
 
 With no text in the TUI, the command prompts for it. The model also gets a `save_note` tool
 (disable with `"modelTool": false`) so you can say "log that decision"; its prompt guidance tells
@@ -62,8 +62,9 @@ Use SQLite for local dev; Postgres is overkill here.
 #pi #decision #project/billing-api #branch/feature/new-ledger
 ```
 
-- **Project** = the `origin` remote's repo name (so worktrees and renamed folders still agree),
-  else the folder name. **Branch** = current branch, or `detached-<sha>`.
+- **Project** = the repo name from the `origin` remote (or the first remote when there is no
+  `origin`), so worktrees and renamed folders still agree; else the folder name.
+  **Branch** = current branch, or `detached-<sha>`.
 - Tags are Obsidian-valid (`/` nests: `#branch/feature/new-ledger`). File names are sanitized for
   Windows (reserved names, `<>:"|?*`, trailing dots).
 - Append-only: a first write creates the file with frontmatter; later writes only append.

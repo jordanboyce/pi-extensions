@@ -12,7 +12,9 @@ export async function appendToNote(file: string, header: string, text: string): 
 	await appendFile(file, text, "utf8");
 }
 
-/** Headings (`## …`) of the last `count` entries in a note file; todo lines are included. */
+const ENTRY_LINE = /^(## |- \[[ xX-]\] )/;
+
+/** Headings (`## …`) of the last `count` entries in a note file; todo lines (open, done or cancelled) are included. */
 export async function recentEntries(file: string, count: number): Promise<string[]> {
 	let text: string;
 	try {
@@ -21,6 +23,6 @@ export async function recentEntries(file: string, count: number): Promise<string
 		if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
 		throw e;
 	}
-	const lines = text.split(/\r?\n/).filter((l) => l.startsWith("## ") || l.startsWith("- [ ] "));
+	const lines = text.split(/\r?\n/).filter((l) => ENTRY_LINE.test(l));
 	return lines.slice(-count).map((l) => (l.length > 140 ? `${l.slice(0, 137)}...` : l));
 }

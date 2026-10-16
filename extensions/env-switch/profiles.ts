@@ -253,7 +253,8 @@ export class EnvApplier {
 // Redaction + display
 // ---------------------------------------------------------------------------
 
-const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE)/i;
+/** Variable names that are treated as secrets even when the value is too short to redact. */
+export const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE)/i;
 const MIN_SECRET_LENGTH = 8;
 
 /** Which resolved variables count as secrets: name heuristic plus the profile's explicit `redact` list. */
@@ -276,6 +277,34 @@ export function redactText(text: string, secrets: Record<string, string>): strin
 	return out;
 }
 
+/**
+ * Redacts every string inside a JSON value (tool `structuredContent`, config dumps parsed as
+ * JSON). Returns the same reference when nothing changed so callers can skip a no-op replace.
+ */
+export function redactJson<T>(value: T, secrets: Record<string, string>): T {
+	if (typeof value === "string") return redactText(value, secrets) as T;
+	if (Array.isArray(value)) {
+		let changed = false;
+		const next = value.map((item) => {
+			const r = redactJson(item, secrets);
+			if (r !== item) changed = true;
+			return r;
+		});
+		return (changed ? next : value) as T;
+	}
+	if (value && typeof value === "object") {
+		let changed = false;
+		const next: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+			const r = redactJson(v, secrets);
+			if (r !== v) changed = true;
+			next[k] = r;
+		}
+		return (changed ? next : value) as T;
+	}
+	return value;
+}
+
 /** `…1234` fingerprint so you can tell keys apart without exposing them. */
 export function fingerprint(value: string): string {
 	return value.length >= 12 ? `…${value.slice(-4)}` : "set";
@@ -295,19 +324,50 @@ export const PROVIDER_ENV: Record<string, string> = {
 	FIREWORKS_API_KEY: "fireworks",
 };
 
+const VAR_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+	return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function isStringList(v: unknown): v is string[] {
+	return Array.isArray(v) && v.every((s) => typeof s === "string");
+}
+
+function isGlobField(v: unknown): boolean {
+	return v === undefined || typeof v === "string" || isStringList(v);
+}
+
+/** Checks shape and references so a typo surfaces as one clear message instead of a crash mid-activation. */
 export function validateConfig(raw: unknown): { config?: EnvSwitchConfig; error?: string } {
-	if (!raw || typeof raw !== "object") return { error: "config must be a JSON object" };
-	const c = raw as Partial<EnvSwitchConfig>;
-	if (!c.profiles || typeof c.profiles !== "object") return { error: '"profiles" object is required' };
+	if (!isPlainObject(raw)) return { error: "config must be a JSON object" };
+	const c = raw;
+	if (!isPlainObject(c.profiles)) return { error: '"profiles" object is required' };
 	for (const [name, p] of Object.entries(c.profiles)) {
-		for (const [k, v] of Object.entries(p?.env ?? {})) {
+		if (!isPlainObject(p)) return { error: `profiles.${name} must be an object` };
+		if (p.env !== undefined && !isPlainObject(p.env)) return { error: `profiles.${name}.env must be an object` };
+		for (const [k, v] of Object.entries(p.env ?? {})) {
 			if (typeof v !== "string") return { error: `profiles.${name}.env.${k} must be a string` };
-			if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) return { error: `profiles.${name}.env has invalid variable name "${k}"` };
+			if (!VAR_NAME.test(k)) return { error: `profiles.${name}.env has invalid variable name "${k}"` };
+		}
+		for (const field of ["unset", "redact"] as const) {
+			if (p[field] !== undefined && !isStringList(p[field])) return { error: `profiles.${name}.${field} must be an array of strings` };
+		}
+		for (const field of ["description", "warn"] as const) {
+			if (p[field] !== undefined && typeof p[field] !== "string") return { error: `profiles.${name}.${field} must be a string` };
 		}
 	}
+	if (c.rules !== undefined && !Array.isArray(c.rules)) return { error: '"rules" must be an array' };
 	for (const [i, r] of (c.rules ?? []).entries()) {
-		if (!r.profile || !c.profiles[r.profile]) return { error: `rules[${i}] references unknown profile "${r.profile}"` };
+		if (!isPlainObject(r)) return { error: `rules[${i}] must be an object` };
+		if (typeof r.profile !== "string" || !c.profiles[r.profile]) return { error: `rules[${i}] references unknown profile "${String(r.profile)}"` };
+		for (const field of ["remote", "remoteName", "path", "repo"] as const) {
+			if (!isGlobField(r[field])) return { error: `rules[${i}].${field} must be a string or an array of strings` };
+		}
 	}
-	if (c.default && !c.profiles[c.default]) return { error: `default references unknown profile "${c.default}"` };
-	return { config: c as EnvSwitchConfig };
+	if (c.default !== undefined && (typeof c.default !== "string" || !c.profiles[c.default])) {
+		return { error: `default references unknown profile "${String(c.default)}"` };
+	}
+	if (c.redact !== undefined && typeof c.redact !== "boolean") return { error: '"redact" must be true or false' };
+	return { config: c as unknown as EnvSwitchConfig };
 }

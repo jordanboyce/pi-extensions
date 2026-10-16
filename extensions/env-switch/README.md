@@ -52,7 +52,7 @@ Globs are case-insensitive; `*` stays within a path segment, `**` crosses them.
 
 | Command | Does |
 |---|---|
-| `/env` | Active profile, how it was chosen, variable names with a `…1234` fingerprint |
+| `/env` | Active profile, how it was chosen, and the variables set: secrets as a `…1234` fingerprint, plain settings (base URLs, regions) in full |
 | `/env list` | All profiles (`*` marks the active one) |
 | `/env use <name>` | Switch for the rest of this session |
 | `/env off` | Restore the original environment |
@@ -64,8 +64,9 @@ Globs are case-insensitive; `*` stays within a path segment, `**` crosses them.
   only *name* a profile. A hostile clone can at worst pick one of your own profiles.
 - **Redaction.** While a profile is active, values of variables named like `*KEY*`, `*TOKEN*`,
   `*SECRET*`, `*PASSWORD*` (≥ 8 chars) are replaced with `[redacted:NAME]` in tool output, so
-  `env`/`printenv` or a leaked config dump doesn't put them in the model's context. Set
-  `"redact": false` at the top level to disable.
+  `env`/`printenv` or a leaked config dump doesn't put them in the model's context. Both the text
+  content and a tool's `structuredContent` (JSON results) are redacted. Set `"redact": false` at
+  the top level to disable.
 - **Not hidden from commands the agent runs.** Variables live in the pi process, so child
   processes (bash tool, test runs) inherit them. That's intended, but it means the agent can use
   the keys; redaction only stops it *reading* them.

@@ -112,22 +112,25 @@ export function entryTitle(entry: NoteEntry): string {
 
 /**
  * Body without a heading: shared by the Markdown file and Joplin.
- * A todo is a single Obsidian-Tasks checkbox; project and branch live in its tags, `when` trails the first line.
+ * A todo is a single Obsidian Tasks checkbox: project and branch live in its tags, and with
+ * `withCreated` the line ends in Tasks' created-date field (`➕ YYYY-MM-DD`) so the plugin can
+ * sort and filter by it. Nothing may follow that field, which is why there is no time of day.
  */
-export function entryBody(entry: NoteEntry, baseTags?: string[], when?: string): string {
+export function entryBody(entry: NoteEntry, baseTags?: string[], withCreated = false): string {
 	const tagLine = entryTags(entry, baseTags).map((t) => `#${t}`).join(" ");
 	if (entry.kind === "todo") {
 		const [first = "", ...rest] = entry.text.trim().split(/\r?\n/);
 		const continuation = rest.filter((l) => l.trim()).map((l) => `  ${l.trim()}`);
-		return [`- [ ] ${first.trim()} ${tagLine}${when ? ` — ${when}` : ""}`, ...continuation].join("\n");
+		const created = withCreated ? ` ➕ ${formatDate(entry.date)}` : "";
+		return [`- [ ] ${first.trim()} ${tagLine}${created}`, ...continuation].join("\n");
 	}
 	const meta = `**Project:** ${entry.project}${entry.branch ? ` · **Branch:** \`${entry.branch}\`` : ""}`;
 	return [meta, "", entry.text.trim(), "", tagLine].join("\n");
 }
 
 export function formatEntry(entry: NoteEntry, config: NotesConfig, withDate: boolean): string {
+	if (entry.kind === "todo") return `\n${entryBody(entry, config.tags, true)}\n`;
 	const when = withDate ? `${formatDate(entry.date)} ${formatTime(entry.date)}` : formatTime(entry.date);
-	if (entry.kind === "todo") return `\n${entryBody(entry, config.tags, when)}\n`;
 	const body = entryBody(entry, config.tags);
 	const title = entry.title?.trim();
 	return `\n## ${when} · ${entry.kind}${title ? ` — ${title}` : ""}\n\n${body}\n`;
@@ -139,17 +142,35 @@ export function projectNameFromRemote(url: string): string {
 	return last ?? "";
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+	return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
 export function validateConfig(raw: unknown): { config?: NotesConfig; error?: string } {
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { error: "config must be a JSON object" };
-	const c = raw as NotesConfig;
+	if (!isPlainObject(raw)) return { error: "config must be a JSON object" };
+	const c = raw;
+	for (const key of ["vault", "folder"] as const) {
+		if (c[key] !== undefined && (typeof c[key] !== "string" || !c[key])) return { error: `"${key}" must be a non-empty string` };
+	}
 	if (c.layout !== undefined && c.layout !== "project" && c.layout !== "daily") {
 		return { error: '"layout" must be "project" or "daily"' };
 	}
 	if (c.tags !== undefined && (!Array.isArray(c.tags) || c.tags.some((t) => typeof t !== "string"))) {
 		return { error: '"tags" must be an array of strings' };
 	}
-	if (c.joplin?.host && !/^(127\.0\.0\.1|localhost|\[?::1\]?)$/i.test(c.joplin.host)) {
-		return { error: 'joplin.host must be a loopback address (127.0.0.1, localhost or ::1)' };
+	if (c.modelTool !== undefined && typeof c.modelTool !== "boolean") return { error: '"modelTool" must be true or false' };
+	if (c.joplin !== undefined) {
+		if (!isPlainObject(c.joplin)) return { error: '"joplin" must be an object' };
+		const j = c.joplin;
+		if (j.host !== undefined && (typeof j.host !== "string" || !/^(127\.0\.0\.1|localhost|\[?::1\]?)$/i.test(j.host))) {
+			return { error: "joplin.host must be a loopback address (127.0.0.1, localhost or ::1)" };
+		}
+		if (j.port !== undefined && (!Number.isInteger(j.port) || (j.port as number) < 1 || (j.port as number) > 65535)) {
+			return { error: "joplin.port must be an integer between 1 and 65535" };
+		}
+		for (const key of ["notebook", "tokenEnv"] as const) {
+			if (j[key] !== undefined && (typeof j[key] !== "string" || !j[key])) return { error: `joplin.${key} must be a non-empty string` };
+		}
 	}
-	return { config: c };
+	return { config: c as NotesConfig };
 }

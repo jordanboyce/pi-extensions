@@ -7,6 +7,7 @@ import {
 	interpolate,
 	normalizeRemoteUrl,
 	parsePin,
+	redactJson,
 	redactText,
 	resolveProfile,
 	resolveValue,
@@ -146,6 +147,15 @@ describe("redaction", () => {
 		const secrets = { A_KEY: "abcdefgh", B_KEY: "abcdefghij" };
 		assert.equal(redactText("x abcdefghij y abcdefgh z abcdefgh", secrets), "x [redacted:B_KEY] y [redacted:A_KEY] z [redacted:A_KEY]");
 	});
+	it("redactJson walks nested structured content and keeps untouched references", () => {
+		const secrets = { A_KEY: "abcdefgh" };
+		const input = { out: "x abcdefgh", list: ["abcdefgh", 1, null], nested: { keep: "fine" }, n: 2 };
+		const r = redactJson(input, secrets);
+		assert.deepEqual(r, { out: "x [redacted:A_KEY]", list: ["[redacted:A_KEY]", 1, null], nested: { keep: "fine" }, n: 2 });
+		assert.equal(r.nested, input.nested, "unchanged subtrees are the same reference");
+		const clean = { a: ["b"], c: { d: "e" } };
+		assert.equal(redactJson(clean, secrets), clean, "no change returns the same object");
+	});
 	it("fingerprint hides short values entirely", () => {
 		assert.equal(fingerprint("sk-ant-secret-123456"), "…3456");
 		assert.equal(fingerprint("short"), "set");
@@ -159,5 +169,14 @@ describe("validateConfig", () => {
 		assert.match(validateConfig({ profiles: { a: {} }, rules: [{ profile: "zzz" }] }).error ?? "", /zzz/);
 		assert.match(validateConfig({ profiles: { a: { env: { "BAD NAME": "1" } } } }).error ?? "", /invalid variable name/);
 		assert.match(validateConfig({ profiles: { a: { env: { X: 1 } } } }).error ?? "", /must be a string/);
+	});
+	it("rejects wrong shapes instead of crashing on them later", () => {
+		assert.match(validateConfig({ profiles: { a: {} }, rules: { profile: "a" } }).error ?? "", /"rules" must be an array/);
+		assert.match(validateConfig({ profiles: { a: "oops" } }).error ?? "", /profiles\.a must be an object/);
+		assert.match(validateConfig({ profiles: { a: { unset: "OPENAI_API_KEY" } } }).error ?? "", /unset must be an array of strings/);
+		assert.match(validateConfig({ profiles: { a: { redact: [1] } } }).error ?? "", /redact must be an array of strings/);
+		assert.match(validateConfig({ profiles: { a: {} }, rules: [{ profile: "a", remote: 5 }] }).error ?? "", /rules\[0\]\.remote/);
+		assert.match(validateConfig({ profiles: { a: {} }, redact: "no" }).error ?? "", /"redact" must be true or false/);
+		assert.ok(validateConfig({ profiles: { a: { unset: ["X"], redact: ["Y"], warn: "w" } }, rules: [{ profile: "a", path: ["p", "q"] }], redact: false }).config);
 	});
 });
