@@ -1,0 +1,16 @@
+{
+  "fetch": {
+    "timeoutMs": 20000,
+    "maxBytes": 2097152,
+    "maxChars": 40000,
+    "allowPrivate": false,
+    "allow": [],
+    "deny": ["*.internal.example.com"],
+    "userAgent": "pi-web-tools/0.1 (+https://pi.dev)"
+  },
+  "search": {
+    "provider": "brave",
+    "apiKeyEnv": "BRAVE_SEARCH_API_KEY",
+    "count": 5
+  }
+}

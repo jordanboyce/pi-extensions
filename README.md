@@ -9,6 +9,7 @@ written against the Pi 1.x extension API. They run on Windows, macOS and Linux.
 | [`notes-sync`](extensions/notes-sync/README.md) | `/note`, `/decision`, `/arch`, `/todo` append to a folder Obsidian watches (optionally Joplin), tagged with project and branch. |
 | [`git-context`](extensions/git-context/README.md) | Injects branch, recent commits, branch-only commits and uncommitted changes into the system prompt at startup. |
 | [`subagent`](extensions/subagent/README.md) | A `subagent` tool: delegates an independent task to a child pi session, by default in a fresh git worktree on its own branch, and returns its report, files changed, branch and session file. |
+| [`web-tools`](extensions/web-tools/README.md) | `web_fetch` (URL to readable Markdown, with redirect and private-address guards) and `web_search` (Brave Search or Tavily) tools for the model. |
 
 ## Install
 
@@ -48,6 +49,7 @@ to pi's own settings:
 ├── notes-sync.json       # notes-sync: vault path, layout, Joplin
 ├── git-context.json      # git-context: tuning
 ├── subagent.json         # subagent: concurrency, worktree dir, child model/tools
+├── web-tools.json        # web-tools: fetch limits, host lists, search provider
 └── extensions/           # drop-in single-folder installs
 ```
 
@@ -66,7 +68,8 @@ pi -e ./extensions/env-switch     # run one extension from source; /reload after
 
 Pi loads TypeScript directly (via `jiti`), so there is no build step. Tests cover the pure logic
 of each extension (matching, redaction, formatting, snapshot parsing against a real temp git
-repo, a mock Joplin server). Keep `profiles.ts`/`format.ts`/`snapshot.ts`/`core.ts` free of pi imports so
+repo, a mock Joplin server, a local HTTP server for web fetch/search). Keep each extension's pure
+module (`profiles.ts`, `format.ts`, `snapshot.ts`, `core.ts`, `web.ts`, `checkers.ts`) free of pi imports so
 they stay testable under plain `node --test`.
 
 Pi extensions run with your full user permissions. Read anything you add here before loading it.
