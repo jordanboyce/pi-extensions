@@ -10,6 +10,7 @@ written against the Pi 1.x extension API. They run on Windows, macOS and Linux.
 | [`git-context`](extensions/git-context/README.md) | Injects branch, recent commits, branch-only commits and uncommitted changes into the system prompt at startup. |
 | [`subagent`](extensions/subagent/README.md) | A `subagent` tool: delegates an independent task to a child pi session, by default in a fresh git worktree on its own branch, and returns its report, files changed, branch and session file. |
 | [`web-tools`](extensions/web-tools/README.md) | `web_fetch` (URL to readable Markdown, with redirect and private-address guards) and `web_search` (Brave Search or Tavily) tools for the model. |
+| [`diagnostics`](extensions/diagnostics/README.md) | Runs `tsc`, `pyright`/`pyflakes` or `go vet` after every edit or write and appends the errors for the touched file to the tool result, so the model sees what it broke immediately. |
 
 ## Install
 
@@ -50,6 +51,7 @@ to pi's own settings:
 ├── git-context.json      # git-context: tuning
 ├── subagent.json         # subagent: concurrency, worktree dir, child model/tools
 ├── web-tools.json        # web-tools: fetch limits, host lists, search provider
+├── diagnostics.json      # diagnostics: checker commands per extension
 └── extensions/           # drop-in single-folder installs
 ```
 

@@ -15,7 +15,8 @@
       "./extensions/notes-sync/index.ts",
       "./extensions/git-context/index.ts",
       "./extensions/subagent/index.ts",
-      "./extensions/web-tools/index.ts"
+      "./extensions/web-tools/index.ts",
+      "./extensions/diagnostics/index.ts"
     ]
   },
   "scripts": {
