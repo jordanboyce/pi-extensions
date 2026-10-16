@@ -1,7 +1,7 @@
 # pi-extensions
 
-Work extensions for the [pi](https://pi.dev) coding agent (`@earendil-works/pi-coding-agent`),
-written against the Pi 1.x extension API and tested on Windows 11.
+Extensions for the [pi](https://pi.dev) coding agent (`@earendil-works/pi-coding-agent`),
+written against the Pi 1.x extension API. They run on Windows, macOS and Linux.
 
 | Extension | What it does |
 |---|---|
@@ -11,32 +11,42 @@ written against the Pi 1.x extension API and tested on Windows 11.
 
 ## Install
 
-Pi keeps user extensions under `%USERPROFILE%\.pi\agent\` (not directly under `.pi\`).
-Installing this repo as a **local package** loads it in place, with no copying, so
-`git pull` here updates pi:
+Straight from GitHub (pi clones it into its package store and keeps it updated with `pi update`):
 
-```powershell
-pi install D:\vibe-repos\pi-extensions
+```sh
+pi install https://github.com/jordanboyce/pi-extensions
 pi list
 ```
 
-Then `/reload` in a running session. To load only some of them, or to try one without installing:
+Or clone it yourself and install the checkout as a **local package**. Pi loads it in place, so a
+`git pull` in the clone updates pi:
 
-```powershell
-pi -e D:\vibe-repos\pi-extensions\extensions\git-context
+```sh
+git clone https://github.com/jordanboyce/pi-extensions.git
+pi install ./pi-extensions
 ```
 
-Each extension folder is self-contained (no cross-imports), so you can also copy one folder to
-`%USERPROFILE%\.pi\agent\extensions\<name>\` and pi will discover its `index.ts`.
+Then `/reload` in a running session. To load only one extension, or to try one without installing:
 
-Config files (all optional except `env-switch`'s profiles) live next to pi's own settings:
+```sh
+pi -e ./pi-extensions/extensions/git-context
+```
+
+Each extension folder is self-contained (no cross-imports), so you can also copy one folder into
+pi's user extension directory, `~/.pi/agent/extensions/<name>/`, and pi will discover its `index.ts`.
+
+## Configure
+
+Pi keeps user-level files under `~/.pi/agent/` (`%USERPROFILE%\.pi\agent\` on Windows; not
+directly under `.pi\`). Config files, all optional except `env-switch`'s profiles, live there next
+to pi's own settings:
 
 ```
-%USERPROFILE%\.pi\agent\
+~/.pi/agent/
 ├── env-profiles.json     # env-switch: profiles + rules  (holds secrets/commands; keep private)
 ├── notes-sync.json       # notes-sync: vault path, layout, Joplin
 ├── git-context.json      # git-context: tuning
-└── extensions\           # drop-in single-folder installs
+└── extensions/           # drop-in single-folder installs
 ```
 
 Starter files are in each extension folder as `*.example.json`. The real names are in
@@ -44,10 +54,12 @@ Starter files are in each extension folder as `*.example.json`. The real names a
 
 ## Develop
 
-```powershell
+Requires Node 22.18 or newer (the tests run TypeScript directly through Node's type stripping).
+
+```sh
 npm install
-npm run check      # tsc --noEmit + node --test
-pi -e .\extensions\env-switch    # run one extension from source; /reload after edits
+npm run check                     # tsc --noEmit + node --test
+pi -e ./extensions/env-switch     # run one extension from source; /reload after edits
 ```
 
 Pi loads TypeScript directly (via `jiti`), so there is no build step. Tests cover the pure logic

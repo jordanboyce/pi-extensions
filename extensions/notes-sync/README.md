@@ -22,11 +22,13 @@ it to call the tool only when you explicitly ask.
 
 ## Setup
 
-Copy `notes-sync.example.json` to `%USERPROFILE%\.pi\agent\notes-sync.json`:
+Copy `notes-sync.example.json` to `~/.pi/agent/notes-sync.json` (`%USERPROFILE%\.pi\agent\` on
+Windows) and point `vault` at your vault root (a Windows path needs doubled backslashes in JSON,
+e.g. `"C:\\Users\\me\\Obsidian\\Work"`):
 
 ```json
 {
-  "vault": "C:\\Users\\me\\Documents\\Obsidian\\Work",
+  "vault": "/Users/me/Documents/Obsidian/Work",
   "folder": "Pi Notes",
   "layout": "project",
   "tags": ["pi"],
@@ -36,8 +38,8 @@ Copy `notes-sync.example.json` to `%USERPROFILE%\.pi\agent\notes-sync.json`:
 
 | Key | Meaning |
 |---|---|
-| `vault` / `folder` | Notes land in `<vault>\<folder>`. Without `vault`, they go to `~/.pi/agent/notes` and pi tells you once. |
-| `layout` | `project` (default): `<folder>\<project>.md`. `daily`: `<folder>\<project>\YYYY-MM-DD.md`. |
+| `vault` / `folder` | Notes land in `<vault>/<folder>`. Without `vault`, they go to `~/.pi/agent/notes` and pi tells you once. |
+| `layout` | `project` (default): `<folder>/<project>.md`. `daily`: `<folder>/<project>/YYYY-MM-DD.md`. |
 | `tags` | Added to every entry (default `["pi"]`). |
 | `joplin` | See below. |
 

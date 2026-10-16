@@ -21,7 +21,7 @@ export interface Rule {
 	remote?: string | string[];
 	/** Globs against git remote *names*, e.g. `acme-*`. Matches if any remote matches. */
 	remoteName?: string | string[];
-	/** Globs against the repo root path, e.g. `D:/work/acme/**`. */
+	/** Globs against the absolute repo root path, e.g. `**\/work/acme/**` (no `~` expansion). */
 	path?: string | string[];
 	/** Globs against the repo name (last URL segment, or folder name). */
 	repo?: string | string[];

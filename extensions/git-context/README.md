@@ -45,7 +45,7 @@ sent. The footer shows `branch ●changed ↑ahead ↓behind`.
 
 ## Config (optional)
 
-`%USERPROFILE%\.pi\agent\git-context.json`, all keys optional:
+`~/.pi/agent/git-context.json` (`%USERPROFILE%\.pi\agent\` on Windows), all keys optional:
 
 ```json
 { "mode": "startup", "commits": 10, "branchCommits": 10, "maxFiles": 30, "maxDiffLines": 25, "maxChars": 6000 }

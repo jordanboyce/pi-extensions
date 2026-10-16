@@ -11,7 +11,7 @@
       "description": "Acme sandbox keys (dev billing tier)",
       "env": {
         "ANTHROPIC_API_KEY": "!op read op://Acme/anthropic-dev/credential",
-        "ACME_API_TOKEN": "file:C:/Users/me/.secrets/acme-dev-token.txt",
+        "ACME_API_TOKEN": "file:${HOME}/.secrets/acme-dev-token.txt",
         "ACME_API_BASE": "https://api.dev.acme.example"
       },
       "unset": ["OPENAI_API_KEY"]
@@ -29,8 +29,8 @@
   "rules": [
     { "profile": "acme-dev", "remote": "github.com/acme/*" },
     { "profile": "acme-dev", "remoteName": "acme-*" },
-    { "profile": "acme-dev", "path": "D:/work/acme/**" },
-    { "profile": "personal", "path": "D:/vibe-repos/**" }
+    { "profile": "acme-dev", "path": "**/work/acme/**" },
+    { "profile": "personal", "path": "**/personal/**" }
   ],
   "default": "personal",
   "redact": true

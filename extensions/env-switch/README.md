@@ -8,8 +8,8 @@ variables are restored on exit/reload.
 
 ## Setup
 
-1. Copy `env-profiles.example.json` to `%USERPROFILE%\.pi\agent\env-profiles.json` and edit it.
-   (Honors `PI_CODING_AGENT_DIR`; override the file with `PI_ENV_PROFILES_FILE`.)
+1. Copy `env-profiles.example.json` to `~/.pi/agent/env-profiles.json` (`%USERPROFILE%\.pi\agent\`
+   on Windows) and edit it. (Honors `PI_CODING_AGENT_DIR`; override the file with `PI_ENV_PROFILES_FILE`.)
 2. Start pi inside a repo. The footer shows `env:<profile>`.
 
 ## Profiles
@@ -31,7 +31,7 @@ Value forms:
 | `literal` | used as-is (avoid for real secrets) |
 | `${OTHER_VAR}` | interpolated from your real environment (e.g. a user-level var per project) |
 | `!command` | stdout of a command, e.g. `!op read op://Vault/item/field`, `!pass show acme/key` |
-| `file:path` | contents of a file (trimmed) |
+| `file:path` | contents of a file (trimmed); `${VAR}` works inside the path, e.g. `file:${HOME}/.secrets/token` (`${USERPROFILE}` on Windows) |
 
 ## Choosing the profile
 
@@ -44,9 +44,10 @@ Precedence, first hit wins:
 5. `default`
 
 A rule can match on `remote` (URL glob, normalized to `host/owner/repo`, so `git@` and `https://`
-forms are equivalent), `remoteName` (any git remote's name), `path` (repo root, forward slashes
-or backslashes), and `repo`. Fields in one rule are ANDed; a list within a field is ORed.
-Globs are case-insensitive; `*` stays within a path segment, `**` crosses them.
+forms are equivalent), `remoteName` (any git remote's name), `path` (absolute repo root, forward
+slashes or backslashes; `~` is not expanded, so write `**/work/acme/**` or the full path), and
+`repo`. Fields in one rule are ANDed; a list within a field is ORed. Globs are case-insensitive;
+`*` stays within a path segment, `**` crosses them.
 
 ## Commands
 
