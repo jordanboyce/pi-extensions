@@ -79,8 +79,13 @@ Pi extensions run with your full user permissions. Read anything you add here be
 ## Adding another extension
 
 1. `extensions/<name>/index.ts` with `export default function (pi: ExtensionAPI) { … }`
-   (the factory may be `async`).
-2. Add `"./extensions/<name>/index.ts"` to `pi.extensions` in `package.json`.
-3. Don't start timers/watchers in the factory; use `session_start` and clean up in `session_shutdown`.
-4. Types and examples ship with pi: `docs/extensions.md` and `examples/extensions/` inside
+   (the factory may be `async`). Put the logic that doesn't need pi in a sibling module with no
+   pi imports, and test it in `test/<name>.test.ts`.
+2. If it reads a config file, name it `~/.pi/agent/<name>.json`, validate it in the pure module,
+   ship `extensions/<name>/<name>.example.json`, and add the real name to `.gitignore`.
+3. Add `"./extensions/<name>/index.ts"` to `pi.extensions` in `package.json`, a row to the table
+   above, and a line to the config tree if it has a config file. Give it its own `README.md`.
+4. Don't start timers/watchers in the factory; use `session_start` and clean up in `session_shutdown`.
+   A `tool_result` handler that replaces `content` must also return `structuredContent`, or pi drops it.
+5. Types and examples ship with pi: `docs/extensions.md` and `examples/extensions/` inside
    `@earendil-works/pi-coding-agent`.
