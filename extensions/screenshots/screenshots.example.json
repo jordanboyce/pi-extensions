@@ -1,0 +1,7 @@
+{
+  "autoAttach": true,
+  "maxImages": 8,
+  "maxBytes": 26214400,
+  "staleAfterMinutes": 15,
+  "screenshotDirs": ["~/Pictures/Screenshots"]
+}

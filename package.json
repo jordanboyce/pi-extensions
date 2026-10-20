@@ -1,7 +1,7 @@
 {
   "name": "pi-extensions",
   "version": "0.1.0",
-  "description": "Personal collection of pi (pi.dev) extensions: per-repo env switching, notes sync, git context injection, subagents, web fetch and search, post-edit diagnostics.",
+  "description": "Personal collection of pi (pi.dev) extensions: per-repo env switching, notes sync, git context injection, subagents, web fetch and search, post-edit diagnostics, screenshot attachments.",
   "private": true,
   "type": "module",
   "keywords": ["pi-package"],
@@ -16,7 +16,8 @@
       "./extensions/git-context/index.ts",
       "./extensions/subagent/index.ts",
       "./extensions/web-tools/index.ts",
-      "./extensions/diagnostics/index.ts"
+      "./extensions/diagnostics/index.ts",
+      "./extensions/screenshots/index.ts"
     ]
   },
   "scripts": {
