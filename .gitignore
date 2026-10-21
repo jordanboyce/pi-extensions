@@ -4,7 +4,6 @@ node_modules/
 env-profiles.json
 notes-sync.json
 git-context.json
-subagent.json
 web-tools.json
 diagnostics.json
 screenshots.json
